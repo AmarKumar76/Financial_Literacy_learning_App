@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpen, LayoutDashboard, Trophy, User, Shield,
-  Bell, LogOut, Menu, X, Zap, TrendingUp, Star
+  Bell, LogOut, Menu, X, Zap, TrendingUp, Star, PieChart
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
@@ -21,6 +21,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
     { to: '/courses',    label: 'Learn',       icon: BookOpen },
+    { to: '/simulator',  label: 'Simulator',   icon: PieChart },
     { to: '/progress',   label: 'Progress',    icon: TrendingUp },
     { to: '/leaderboard',label: 'Leaderboard', icon: Trophy },
     { to: '/profile',    label: 'Profile',     icon: User },

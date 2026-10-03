@@ -15,6 +15,7 @@ import QuizAttempt from './pages/Courses/QuizAttempt';
 import Leaderboard from './pages/Dashboard/Leaderboard';
 import Profile from './pages/Dashboard/Profile';
 import Progress from './pages/Dashboard/Progress';
+import BudgetSimulator from './pages/Courses/BudgetSimulator';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AIDraftReview from './pages/Admin/AIDraftReview';
 import Landing from './pages/Landing/Landing';
@@ -43,6 +44,7 @@ function App() {
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/progress" element={<Progress />} />
+                <Route path="/simulator" element={<BudgetSimulator />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
