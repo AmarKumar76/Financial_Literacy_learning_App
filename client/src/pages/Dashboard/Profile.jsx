@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shield, BookOpen, Target, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import BadgeShowcase from '../../components/BadgeShowcase';
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -50,6 +51,8 @@ export default function Profile() {
           <button className="btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--color-danger)' }} onClick={logout}>Sign Out</button>
         </div>
       </div>
+
+      <BadgeShowcase userLevel={user?.level || 1} />
 
     </div>
   );

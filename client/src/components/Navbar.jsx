@@ -5,6 +5,7 @@ import {
   Bell, LogOut, Menu, X, Zap, TrendingUp, Star
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
@@ -72,6 +73,8 @@ export default function Navbar() {
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {user && <NotificationBell />}
+
           {/* XP chip */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '0.3rem',

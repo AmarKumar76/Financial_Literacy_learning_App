@@ -8,8 +8,14 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const lessonRoutes = require('./routes/lessonRoutes');
+const quizRoutes   = require('./routes/quizRoutes');
+const aiRoutes     = require('./routes/aiRoutes');
+const progressRoutes = require('./routes/progressRoutes');
+const { initCronJobs } = require('./cron/streakReminder');
 
 const app = express();
+initCronJobs();
 
 // Middleware
 app.use(express.json());
@@ -21,6 +27,10 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/ai',      aiRoutes);
+app.use('/api/progress', progressRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

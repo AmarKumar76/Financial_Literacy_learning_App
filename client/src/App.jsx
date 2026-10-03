@@ -15,6 +15,8 @@ import QuizAttempt from './pages/Courses/QuizAttempt';
 import Leaderboard from './pages/Dashboard/Leaderboard';
 import Profile from './pages/Dashboard/Profile';
 import Progress from './pages/Dashboard/Progress';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AIDraftReview from './pages/Admin/AIDraftReview';
 import Landing from './pages/Landing/Landing';
 import Footer from './components/Footer';
 
@@ -41,6 +43,10 @@ function App() {
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/progress" element={<Progress />} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/ai-review" element={<AIDraftReview />} />
               </Route>
             </Routes>
           </div>
