@@ -1,86 +1,199 @@
-import React from 'react';
-import { Trophy, Medal, Star, TrendingUp } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { Trophy, Medal, Star, Flame, Crown } from 'lucide-react';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { leaderboardData as mockLeaderboardData } from '../../data/dashboard';
+import api from '../../services/api';
 
 export default function Leaderboard() {
-  const { user } = useAuth();
-  
-  // Mock Leaderboard Data
-  const leaderboard = [
-    { id: 1, name: 'Alex M.', xp: 12450, rank: 1, isCurrentUser: false },
-    { id: 2, name: 'Sarah J.', xp: 11200, rank: 2, isCurrentUser: false },
-    { id: 3, name: 'David K.', xp: 10800, rank: 3, isCurrentUser: false },
-    { id: 4, name: user?.name || 'You', xp: user?.XP || 4850, rank: 4, isCurrentUser: true },
-    { id: 5, name: 'Michael T.', xp: 4100, rank: 5, isCurrentUser: false },
-    { id: 6, name: 'Emma W.', xp: 3950, rank: 6, isCurrentUser: false },
-  ];
+  const [filter, setFilter] = useState('Weekly');
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const renderMedal = (rank) => {
-    if (rank === 1) return <Medal size={24} color="#fbbf24" />; // Gold
-    if (rank === 2) return <Medal size={24} color="#9ca3af" />; // Silver
-    if (rank === 3) return <Medal size={24} color="#b45309" />; // Bronze
-    return <span style={{ width: 24, textAlign: 'center', fontWeight: 600, color: 'var(--color-text-muted)' }}>{rank}</span>;
-  };
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const res = await api.get('/leaderboard');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((u, index) => ({
+            rank: index + 1,
+            name: u.name || 'Anonymous Learner',
+            xp: u.XP || 0,
+            points: `${u.XP || 0} XP`,
+            level: u.level ? `Level ${u.level}` : 'Learner',
+            avatar: `https://images.unsplash.com/photo-${1534528741775 + (index % 5)}?auto=format&fit=crop&w=150&q=80`,
+            streak: u.streak || 1,
+          }));
+          setLeaderboard(mapped);
+        } else {
+          setLeaderboard(mockLeaderboardData);
+        }
+      } catch (err) {
+        setLeaderboard(mockLeaderboardData);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeaderboard();
+  }, [filter]);
+
+  const activeData = leaderboard.length > 0 ? leaderboard : mockLeaderboardData;
+  const firstPlace = activeData[0] || { name: 'Learner 1', xp: 100, level: 'Level 1', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' };
+  const secondPlace = activeData[1] || { name: 'Learner 2', xp: 80, level: 'Level 1', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80' };
+  const thirdPlace = activeData[2] || { name: 'Learner 3', xp: 50, level: 'Level 1', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80' };
 
   return (
-    <div className="animate-fadeInUp" style={{ maxWidth: 800, margin: '0 auto', padding: '0 1rem' }}>
-      
-      <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(251,191,36,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', border: '1px solid rgba(251,191,36,0.3)' }}>
-          <Trophy size={32} color="var(--color-accent-gold)" />
-        </div>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Global Leaderboard</h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem' }}>See how you stack up against other learners this week.</p>
-      </div>
-
-      {/* Top 3 Podium (Desktop only for simplicity in mockup) */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: '1rem', marginBottom: '3rem', height: 200 }} className="desktop-nav">
-        {/* Second Place */}
-        <div className="glass" style={{ width: 120, height: '70%', borderBottomLeftRadius: 0, borderBottomRightRadius: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '1rem', background: 'linear-gradient(180deg, rgba(156,163,175,0.1) 0%, transparent 100%)', borderTop: '2px solid #9ca3af' }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#9ca3af', marginBottom: '0.5rem', color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>S</div>
-          <span style={{ fontWeight: 600 }}>Sarah J.</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>11.2k XP</span>
-        </div>
-        {/* First Place */}
-        <div className="glass glass-neon-gold" style={{ width: 140, height: '90%', borderBottomLeftRadius: 0, borderBottomRightRadius: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '1rem', borderTop: '2px solid #fbbf24', zIndex: 10 }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fbbf24', marginBottom: '0.5rem', color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>A</div>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Alex M.</span>
-          <span style={{ fontSize: '0.9rem', color: 'var(--color-accent-gold)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}><Star size={12} fill="currentColor"/> 12.4k XP</span>
-        </div>
-        {/* Third Place */}
-        <div className="glass" style={{ width: 120, height: '60%', borderBottomLeftRadius: 0, borderBottomRightRadius: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '1rem', background: 'linear-gradient(180deg, rgba(180,83,9,0.1) 0%, transparent 100%)', borderTop: '2px solid #b45309' }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#b45309', marginBottom: '0.5rem', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>D</div>
-          <span style={{ fontWeight: 600 }}>David K.</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>10.8k XP</span>
-        </div>
-      </div>
-
-      {/* List View */}
-      <div className="glass" style={{ overflow: 'hidden' }}>
-        {leaderboard.map((u, i) => (
-          <div key={u.id} style={{ 
-            display: 'flex', alignItems: 'center', padding: '1rem 1.5rem', 
-            borderBottom: i !== leaderboard.length - 1 ? '1px solid var(--color-border)' : 'none',
-            background: u.isCurrentUser ? 'rgba(99,102,241,0.1)' : 'transparent'
-          }}>
-            <div style={{ width: 40, display: 'flex', justifyContent: 'center' }}>
-              {renderMedal(u.rank)}
-            </div>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: u.isCurrentUser ? 'var(--color-primary)' : 'var(--color-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, margin: '0 1rem' }}>
-              {u.name[0]}
-            </div>
-            <div style={{ flexGrow: 1 }}>
-              <h4 style={{ fontWeight: 600, fontSize: '1.1rem', color: u.isCurrentUser ? 'var(--color-primary-light)' : 'var(--color-text)' }}>
-                {u.name} {u.isCurrentUser && '(You)'}
-              </h4>
-            </div>
-            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem', color: u.isCurrentUser ? 'var(--color-accent-gold)' : 'var(--color-text-muted)' }}>
-              {u.xp} <span style={{ fontSize: '0.8rem' }}>XP</span>
-            </div>
+    <DashboardLayout>
+      <div className="flex flex-col gap-6 animate-fadeInUp font-sans max-w-5xl mx-auto">
+        {/* Header & Filter Tabs */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <Trophy className="w-7 h-7 text-amber-500 fill-amber-400 stroke-amber-600" />
+              <span>Leaderboard</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+              Compete with fellow learners, earn XP points, and climb the rankings.
+            </p>
           </div>
-        ))}
-      </div>
 
-    </div>
+          {/* Time Filter Tabs */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start md:self-auto">
+            {['Weekly', 'Monthly', 'All-Time'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  filter === tab
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* TOP 3 PODIUM SECTION */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-6 items-end my-2 pt-6">
+          {/* 2nd Place (Silver) */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 flex flex-col items-center text-center shadow-2xs relative order-1">
+            <div className="absolute -top-4 w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold ring-4 ring-white">
+              2
+            </div>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-slate-300 shadow-xs mb-2">
+              <img
+                src={secondPlace.avatar}
+                alt={secondPlace.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="font-extrabold text-xs sm:text-sm text-slate-900 line-clamp-1">
+              {secondPlace.name}
+            </span>
+            <span className="text-[11px] font-bold text-slate-500 mt-0.5">
+              {secondPlace.xp} XP
+            </span>
+          </div>
+
+          {/* 1st Place (Gold) */}
+          <div className="bg-gradient-to-b from-amber-50 to-white border-2 border-amber-300 rounded-2xl p-5 sm:p-6 flex flex-col items-center text-center shadow-md relative order-2 -mt-4">
+            <div className="absolute -top-6 w-9 h-9 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center ring-4 ring-white shadow-xs">
+              <Crown className="w-5 h-5 fill-slate-900 stroke-none" />
+            </div>
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-3 border-amber-400 shadow-md mb-2">
+              <img
+                src={firstPlace.avatar}
+                alt={firstPlace.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="font-extrabold text-sm sm:text-base text-slate-900 line-clamp-1">
+              {firstPlace.name}
+            </span>
+            <span className="text-xs font-extrabold text-amber-700 mt-0.5 flex items-center gap-1">
+              <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+              {firstPlace.xp} XP
+            </span>
+          </div>
+
+          {/* 3rd Place (Bronze) */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 flex flex-col items-center text-center shadow-2xs relative order-3">
+            <div className="absolute -top-4 w-7 h-7 rounded-full bg-amber-800/10 text-amber-800 flex items-center justify-center text-xs font-bold ring-4 ring-white">
+              3
+            </div>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-amber-700/30 shadow-xs mb-2">
+              <img
+                src={thirdPlace.avatar}
+                alt={thirdPlace.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="font-extrabold text-xs sm:text-sm text-slate-900 line-clamp-1">
+              {thirdPlace.name}
+            </span>
+            <span className="text-[11px] font-bold text-slate-500 mt-0.5">
+              {thirdPlace.xp} XP
+            </span>
+          </div>
+        </div>
+
+        {/* RANKINGS TABLE LIST */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs">
+          <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200/80 grid grid-cols-12 text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <span className="col-span-2 sm:col-span-1 text-center">Rank</span>
+            <span className="col-span-6 sm:col-span-6">Learner</span>
+            <span className="col-span-2 sm:col-span-3 text-center">Streak</span>
+            <span className="col-span-2 sm:col-span-2 text-right">XP Points</span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {activeData.map((item, idx) => (
+              <div
+                key={item.rank || idx}
+                className="px-5 py-3.5 grid grid-cols-12 items-center transition-colors hover:bg-slate-50 text-slate-800"
+              >
+                {/* Rank Number */}
+                <span className="col-span-2 sm:col-span-1 text-center font-extrabold text-sm text-slate-600">
+                  #{item.rank || idx + 1}
+                </span>
+
+                {/* User Info */}
+                <div className="col-span-6 sm:col-span-6 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-200 shrink-0">
+                    <img
+                      src={item.avatar}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-xs sm:text-sm text-slate-900">
+                      {item.name}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      {item.level || 'Learner'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Streak Badge */}
+                <div className="col-span-2 sm:col-span-3 flex items-center justify-center">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-600 text-xs font-semibold border border-orange-100">
+                    <Flame className="w-3.5 h-3.5 fill-orange-500 stroke-none" />
+                    {item.streak || 1}d
+                  </span>
+                </div>
+
+                {/* XP Score */}
+                <span className="col-span-2 sm:col-span-2 text-right font-extrabold text-xs sm:text-sm text-slate-900">
+                  {item.xp || 0} <span className="text-[10px] text-slate-400 font-normal">XP</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 }

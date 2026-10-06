@@ -5,7 +5,7 @@ import { Zap, Github, Twitter, Linkedin } from 'lucide-react';
 export default function Footer() {
   return (
     <footer style={{ borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg)', padding: '4rem 1.5rem 2rem', marginTop: 'auto' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 'clamp(1.5rem, 4vw, 3rem)' }}>
         
         {/* Brand */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

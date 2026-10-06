@@ -1,72 +1,207 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, CheckCircle, Target } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import {
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Lightbulb,
+  FileCheck,
+  Play,
+} from 'lucide-react';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import api from '../../services/api';
 
 export default function LessonView() {
   const { id, lessonId } = useParams();
   const navigate = useNavigate();
-  const [readingProgress, setReadingProgress] = useState(0);
+  const [lessonData, setLessonData] = useState(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock Lesson Data
-  const lesson = {
-    title: "Understanding Cash Flow",
-    content: `
-      <h2>The Lifeblood of Your Finances</h2>
-      <p>Cash flow is simply the money coming in (income) and the money going out (expenses). Positive cash flow means you earn more than you spend. Negative cash flow means you're sinking into debt.</p>
-      
-      <h3>Step 1: Track Everything</h3>
-      <p>You can't manage what you don't measure. Use a spreadsheet or an app to track every penny for a month. You'll be surprised where your money actually goes!</p>
-
-      <h3>Step 2: The 50/30/20 Rule</h3>
-      <p>A simple rule of thumb for budgeting:</p>
-      <ul>
-        <li><strong>50% Needs:</strong> Rent, groceries, utilities.</li>
-        <li><strong>30% Wants:</strong> Dining out, entertainment, hobbies.</li>
-        <li><strong>20% Savings:</strong> Debt repayment, emergency fund, investments.</li>
-      </ul>
-      
-      <p>By keeping your expenses aligned with these percentages, you ensure a healthy financial future while still enjoying the present.</p>
-    `,
-    time: "5 min read"
+  const fallbackLesson = {
+    _id: lessonId || '1',
+    title: 'What is Income Tax & How Does TDS Work?',
+    duration: '5 min read',
+    summary:
+      'Income tax is a direct tax levied by the government on your income. TDS (Tax Deducted at Source) ensures tax is collected right when income is generated.',
+    objectives: [
+      'Tax is charged based on income slabs defined by the government.',
+      'TDS is deducted automatically by employers or banks on interest/salary.',
+      'Filing an ITR (Income Tax Return) allows you to claim refunds for extra TDS paid.',
+      'Section 80C allows tax savings up to ₹1.5 Lakh through investments like ELSS & PPF.',
+    ],
+    content:
+      'If your salary is ₹50,000/month and your company deducts ₹2,000 as TDS, you receive ₹48,000 in your account. At the end of the year, filing ITR proves your total tax liability and gets you a refund if extra was deducted!',
   };
 
-  const handleScroll = (e) => {
-    const element = e.target;
-    const progress = (element.scrollTop / (element.scrollHeight - element.clientHeight)) * 100;
-    setReadingProgress(progress);
+  useEffect(() => {
+    const fetchLesson = async () => {
+      try {
+        if (lessonId && lessonId.length === 24) {
+          const res = await api.get(`/lessons/${lessonId}`);
+          setLessonData(res.data);
+          setIsCompleted(!!res.data.isCompleted);
+        } else {
+          setLessonData(fallbackLesson);
+        }
+      } catch (err) {
+        setLessonData(fallbackLesson);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLesson();
+  }, [lessonId]);
+
+  const currentLesson = lessonData || fallbackLesson;
+  const lessonTitle = currentLesson.title || fallbackLesson.title;
+  const time = currentLesson.duration ? `${currentLesson.duration} min read` : '5 min read';
+  const overview = currentLesson.summary || fallbackLesson.summary;
+  const keyPoints = Array.isArray(currentLesson.objectives) && currentLesson.objectives.length > 0
+    ? currentLesson.objectives
+    : fallbackLesson.objectives;
+  const realWorldExample = currentLesson.content || fallbackLesson.content;
+
+  const handleCompleteAndQuiz = async () => {
+    setSubmitting(true);
+    try {
+      if (currentLesson._id && currentLesson._id.length === 24) {
+        await api.post(`/lessons/${currentLesson._id}/complete`);
+        setIsCompleted(true);
+      }
+    } catch (err) {
+      console.warn('Lesson completion API call error:', err);
+    } finally {
+      setSubmitting(false);
+      const quizTargetId = currentLesson._id || lessonId || '1';
+      navigate(`/courses/${id}/quiz/${quizTargetId}`);
+    }
   };
 
   return (
-    <div className="animate-fadeInUp" style={{ maxWidth: 800, margin: '0 auto', padding: '0 1rem' }}>
-      <div className="glass glass-neon-green" style={{ padding: '2.5rem', position: 'relative' }}>
-        
-        {/* Progress Bar at Top */}
-        <div style={{ position: 'absolute', top: 0, left: 0, height: 4, background: 'var(--color-accent)', width: `${readingProgress}%`, transition: 'width 0.1s', borderTopLeftRadius: 16, borderTopRightRadius: readingProgress > 98 ? 16 : 0 }} />
+    <DashboardLayout>
+      <div className="flex flex-col gap-6 animate-fadeInUp font-sans max-w-6xl mx-auto">
+        {/* Breadcrumb Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <Link to="/courses" className="hover:text-blue-600 transition-colors">
+              Modules
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-slate-900">Module Details</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-blue-600 font-bold">{lessonTitle}</span>
+          </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', color: 'var(--color-accent)' }}>
-          <BookOpen size={20} />
-          <span style={{ fontWeight: 600, fontSize: '0.9rem', letterSpacing: 1, textTransform: 'uppercase' }}>Lesson {lessonId} • {lesson.time}</span>
+          <Link
+            to="/courses"
+            className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back to Modules</span>
+          </Link>
         </div>
 
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '2rem', color: 'white' }}>
-          {lesson.title}
-        </h1>
+        {/* Main Lesson Content Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-8 bg-white border border-slate-200/90 rounded-2xl p-6 md:p-8 shadow-2xs flex flex-col gap-6">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wide mb-2">
+                <BookOpen className="w-4 h-4" />
+                <span>{time} {isCompleted && '• ✅ Completed'}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                {lessonTitle}
+              </h1>
+            </div>
 
-        <div 
-          style={{ maxHeight: '50vh', overflowY: 'auto', paddingRight: '1rem', color: 'var(--color-text-muted)', fontSize: '1.1rem', lineHeight: 1.8 }}
-          onScroll={handleScroll}
-          dangerouslySetInnerHTML={{ __html: lesson.content }}
-        />
+            {/* Visual Header Banner */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-md shadow-blue-600/15">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-200 mb-1">
+                  Core Educational Concept
+                </span>
+                <h3 className="text-xl font-extrabold leading-snug">
+                  {lessonTitle}
+                </h3>
+                <p className="text-xs text-blue-100 mt-1 max-w-sm">
+                  Understanding money principles step by step to build your financial literacy.
+                </p>
+              </div>
 
-        <div style={{ marginTop: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)', paddingTop: '2rem' }}>
-          <button className="btn-ghost" onClick={() => navigate('/courses')}>Back to Modules</button>
-          
-          <button className="btn-primary" onClick={() => navigate(`/courses/${id}/quiz/1`)} style={{ gap: '0.5rem' }}>
-            <CheckCircle size={18} />
-            Complete & Take Quiz
-          </button>
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0">
+                <Play className="w-6 h-6 fill-white text-white ml-0.5" />
+              </div>
+            </div>
+
+            {/* Overview Section */}
+            <div className="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+              {overview}
+            </div>
+
+            {/* Key Points Box */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
+                <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-500 stroke-none" />
+                <span>Key Takeaways & Learning Objectives</span>
+              </div>
+              <ul className="flex flex-col gap-2.5">
+                {keyPoints.map((point, index) => (
+                  <li key={index} className="flex items-start gap-2.5 text-xs md:text-sm text-slate-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Real-World Scenario Box */}
+            <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-5 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 uppercase tracking-wide">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span>Practical Financial Context</span>
+              </div>
+              <p className="text-xs md:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                {realWorldExample}
+              </p>
+            </div>
+
+            {/* Footer Lesson Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100 mt-2">
+              <button
+                onClick={() => navigate('/courses')}
+                className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs md:text-sm px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+              >
+                Previous Module
+              </button>
+
+              <button
+                onClick={handleCompleteAndQuiz}
+                disabled={submitting}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs md:text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+              >
+                <FileCheck className="w-4 h-4" />
+                <span>{submitting ? 'Saving Progress...' : 'Mark as Complete & Take Quiz'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="lg:col-span-4 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-col gap-4">
+            <h3 className="font-extrabold text-sm text-slate-900 tracking-tight pb-3 border-b border-slate-100">
+              Module Key Highlights
+            </h3>
+            <div className="text-xs text-slate-600 space-y-2">
+              <p>• Estimated completion time: {time}</p>
+              <p>• Quiz reward: +20 XP upon 60%+ score</p>
+              <p>• Perfect Quiz Bonus: +50 XP</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

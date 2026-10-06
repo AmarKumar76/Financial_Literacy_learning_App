@@ -12,9 +12,9 @@ export default function Onboarding() {
 
   const [formData, setFormData] = useState({
     preferences: {
-      userType: 'Student', // Student, First-time Earner, Experienced Professional
+      userType: 'Student',
     },
-    learningGoal: 'Budgeting', // Budgeting, Investing, Taxes, General
+    learningGoal: 'Budgeting',
   });
 
   const handleChange = (e) => {
@@ -38,13 +38,13 @@ export default function Onboarding() {
     setLoading(true);
 
     try {
-      const updatedUser = await submitOnboarding(user._id || user.id, formData);
-      updateUser({ 
+      await submitOnboarding(user?._id || user?.id, formData);
+      updateUser({
         preferences: formData.preferences,
         learningGoal: formData.learningGoal,
-        isOnboarded: true 
+        isOnboarded: true,
       });
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save onboarding data.');
     } finally {
@@ -53,79 +53,72 @@ export default function Onboarding() {
   };
 
   return (
-    <div style={{
-      minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '1rem',
-    }}>
-      <div className="animate-fadeInUp" style={{ width: '100%', maxWidth: 500 }}>
-        
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: 56, height: 56, background: 'linear-gradient(135deg,#6366f1,#10b981)',
-            borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1rem',
-          }}>
-            <Sparkles size={26} color="white" />
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 font-sans text-slate-900 antialiased">
+      <div className="w-full max-w-md animate-fadeInUp flex flex-col gap-6">
+        {/* Header */}
+        <div className="flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-3 shadow-xs">
+            <Sparkles className="w-6 h-6" />
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             Welcome, {user?.name || 'Learner'}!
           </h1>
-          <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-            Let's personalize your learning experience.
+          <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+            Let&apos;s personalize your financial learning path
           </p>
         </div>
 
-        <div className="glass" style={{ padding: '2rem' }}>
+        {/* Card Form */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-2xs">
           {error && (
-            <div style={{
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '1.25rem',
-              color: '#f87171', fontSize: '0.875rem', textAlign: 'center'
-            }}>
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-3 rounded-xl mb-4 text-center">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem' }}>
-                <UserCheck size={16} className="text-primary" />
-                Which best describes you?
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <UserCheck className="w-4 h-4 text-blue-600" />
+                <span>Which best describes you?</span>
               </label>
               <select
                 name="userType"
                 value={formData.preferences.userType}
                 onChange={handleChange}
-                className="input"
-                style={{ cursor: 'pointer', appearance: 'none' }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white font-medium cursor-pointer"
               >
-                <option value="Student" style={{ background: '#111827' }}>Student</option>
-                <option value="First-time Earner" style={{ background: '#111827' }}>First-time Earner</option>
-                <option value="Experienced Professional" style={{ background: '#111827' }}>Experienced Professional</option>
+                <option value="Student">Student</option>
+                <option value="First-time Earner">First-time Earner</option>
+                <option value="Experienced Professional">Experienced Professional</option>
               </select>
             </div>
 
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem' }}>
-                <Target size={16} className="text-accent" />
-                What is your primary learning goal?
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-emerald-600" />
+                <span>What is your primary learning goal?</span>
               </label>
               <select
                 name="learningGoal"
                 value={formData.learningGoal}
                 onChange={handleChange}
-                className="input"
-                style={{ cursor: 'pointer', appearance: 'none' }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white font-medium cursor-pointer"
               >
-                <option value="Budgeting" style={{ background: '#111827' }}>Mastering Budgeting</option>
-                <option value="Investing" style={{ background: '#111827' }}>Understanding Investing</option>
-                <option value="Taxes" style={{ background: '#111827' }}>Navigating Taxes</option>
-                <option value="General" style={{ background: '#111827' }}>General Financial Literacy</option>
+                <option value="Budgeting">Mastering Budgeting</option>
+                <option value="Investing">Understanding Investing</option>
+                <option value="Taxes">Navigating Taxes</option>
+                <option value="General">General Financial Literacy</option>
               </select>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
-              {loading ? <><div className="spinner" /> Saving…</> : <>Start Learning <ArrowRight size={18} /></>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl transition-all shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <span>{loading ? 'Saving...' : 'Start Learning'}</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         </div>

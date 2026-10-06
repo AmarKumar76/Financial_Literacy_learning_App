@@ -1,107 +1,248 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Target, CheckCircle, AlertCircle, Trophy } from 'lucide-react';
+import {
+  Brain,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Trophy,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
+import DashboardLayout from '../../layouts/DashboardLayout';
 
 export default function QuizAttempt() {
-  const { id, quizId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
-  
-  const [selected, setSelected] = useState(null);
+
+  const [selectedOption, setSelectedOption] = useState(null);
   const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(263); // 04:23 timer
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const question = {
-    text: "According to the 50/30/20 rule, how much of your income should be allocated to 'Wants' (entertainment, dining out)?",
+    moduleName: 'Tax Basics',
+    currentQuestionIndex: 2,
+    totalQuestions: 5,
+    text: 'What does TDS stand for in personal taxation?',
     options: [
-      { id: 'a', text: "20%" },
-      { id: 'b', text: "30%" },
-      { id: 'c', text: "50%" },
-      { id: 'd', text: "10%" }
+      { id: 'A', text: 'Total Deduction System' },
+      { id: 'B', text: 'Tax Deducted at Source' },
+      { id: 'C', text: 'Tax Direct Scheme' },
+      { id: 'D', text: 'Total Income Statement' },
     ],
-    correctOption: 'b',
-    explanation: "The rule suggests 50% for Needs, 30% for Wants, and 20% for Savings/Debt reduction."
+    correctId: 'B',
+    aiExplanation:
+      'TDS stands for Tax Deducted at Source. It is a method through which tax is collected directly at the time income is generated (like salary, interest, rent, etc.) rather than waiting for the end of the financial year.',
   };
 
   const handleSubmit = () => {
-    if (!selected) return;
+    if (!selectedOption) return;
     setSubmitted(true);
-    if (selected === question.correctOption) {
-      setScore(100);
-    }
   };
 
-  const handleNext = () => {
-    navigate('/dashboard'); // Go back to dashboard after quiz
-  };
+  const isCorrect = selectedOption === question.correctId;
 
   return (
-    <div className="animate-fadeInUp" style={{ maxWidth: 700, margin: '0 auto', padding: '0 1rem' }}>
-      
-      {!submitted ? (
-        <div className="glass glass-neon-purple" style={{ padding: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary-light)', marginBottom: '1.5rem', fontWeight: 600 }}>
-            <Target size={20} />
-            <span>Knowledge Check</span>
+    <DashboardLayout>
+      <div className="flex flex-col gap-6 animate-fadeInUp font-sans max-w-5xl mx-auto">
+        {/* Top Quiz Bar */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+              <Brain className="w-5 h-5 stroke-[2]" />
+            </div>
+            <div>
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                Quiz — {question.moduleName}
+              </h1>
+              <p className="text-xs text-slate-500">
+                Question {question.currentQuestionIndex} of {question.totalQuestions}
+              </p>
+            </div>
           </div>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '2rem', lineHeight: 1.5 }}>
-            {question.text}
-          </h2>
+          {/* Progress Bar & Timer */}
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="w-32 bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="bg-purple-600 h-full rounded-full w-[40%]" />
+              </div>
+              <span className="text-xs font-bold text-slate-600">40%</span>
+            </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
-            {question.options.map((opt) => (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-mono text-xs font-bold border border-slate-200">
+              <Clock className="w-3.5 h-3.5 text-slate-500" />
+              <span>{formatTimer(timeLeft)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Quiz Two-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Question & Options Area (7 cols) */}
+          <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-2 block">
+                Question {question.currentQuestionIndex}
+              </span>
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-snug mb-6">
+                {question.text}
+              </h2>
+
+              {/* Options */}
+              <div className="flex flex-col gap-3">
+                {question.options.map((opt) => {
+                  const isSelected = selectedOption === opt.id;
+                  let optionStyle =
+                    'border-slate-200 bg-white text-slate-800 hover:border-purple-300 hover:bg-slate-50';
+
+                  if (submitted) {
+                    if (opt.id === question.correctId) {
+                      optionStyle = 'border-emerald-500 bg-emerald-50/70 text-emerald-900 font-bold';
+                    } else if (isSelected && !isCorrect) {
+                      optionStyle = 'border-red-500 bg-red-50/70 text-red-900';
+                    } else {
+                      optionStyle = 'border-slate-200 bg-slate-50 text-slate-400 opacity-60';
+                    }
+                  } else if (isSelected) {
+                    optionStyle = 'border-purple-600 bg-purple-50 text-purple-900 font-bold ring-2 ring-purple-600/10';
+                  }
+
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => !submitted && setSelectedOption(opt.id)}
+                      disabled={submitted}
+                      className={`w-full text-left p-4 rounded-xl border text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-between ${optionStyle}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                            isSelected ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {opt.id}
+                        </span>
+                        <span>{opt.text}</span>
+                      </div>
+
+                      {submitted && opt.id === question.correctId && (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      )}
+                      {submitted && isSelected && !isCorrect && (
+                        <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Submit & Next Actions */}
+            <div className="flex items-center justify-between gap-4 pt-6 border-t border-slate-100 mt-6">
               <button
-                key={opt.id}
-                onClick={() => setSelected(opt.id)}
-                style={{
-                  padding: '1.25rem', borderRadius: 12, textAlign: 'left', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.2s',
-                  background: selected === opt.id ? 'rgba(139,92,246,0.1)' : 'var(--color-surface-2)',
-                  border: selected === opt.id ? '2px solid var(--color-primary)' : '2px solid transparent',
-                  color: selected === opt.id ? 'white' : 'var(--color-text)'
-                }}
+                onClick={() => navigate('/courses')}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all"
               >
-                {opt.text}
+                Previous
               </button>
-            ))}
+
+              {!submitted ? (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!selectedOption}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-all shadow-md shadow-purple-600/20"
+                >
+                  Submit Answer
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-purple-600/20"
+                >
+                  <span>Continue</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          <button 
-            className="btn-primary" 
-            style={{ width: '100%', justifyContent: 'center', padding: '1rem', fontSize: '1.1rem' }}
-            disabled={!selected}
-            onClick={handleSubmit}
-          >
-            Submit Answer
-          </button>
+          {/* Right Column: AI Explanation Panel (5 cols) */}
+          <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs flex flex-col gap-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900">
+                  AI Explanation (Gemini)
+                </h3>
+                <p className="text-[11px] text-slate-400">Instant learning feedback</p>
+              </div>
+            </div>
+
+            {!submitted ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                <Brain className="w-12 h-12 stroke-[1.5] text-slate-300 mb-3" />
+                <p className="text-xs font-medium text-slate-500">
+                  Select an option and submit your answer to unlock the AI explanation.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 animate-fadeInUp">
+                {/* Result Feedback Banner */}
+                <div
+                  className={`p-4 rounded-xl border flex items-center gap-3 ${
+                    isCorrect
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : 'bg-red-50 border-red-200 text-red-900'
+                  }`}
+                >
+                  {isCorrect ? (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-500 shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-bold text-xs">
+                      {isCorrect ? 'Correct Answer!' : 'Incorrect Answer'}
+                    </p>
+                    <p className="text-[11px] opacity-80">
+                      {isCorrect ? 'You earned +10 XP' : 'Review the concept below'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Explanation text */}
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs text-slate-700 leading-relaxed font-normal">
+                  {question.aiExplanation}
+                </div>
+
+                {/* XP Reward Card */}
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center justify-between text-amber-800 font-bold text-xs">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-amber-600" />
+                    <span>Reward Earned</span>
+                  </div>
+                  <span>+{isCorrect ? 10 : 2} XP</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        <div className={`glass ${score === 100 ? 'glass-neon-gold' : 'glass-neon-green'}`} style={{ padding: '3rem', textAlign: 'center' }}>
-          
-          <div style={{ width: 80, height: 80, borderRadius: '50%', background: score === 100 ? 'rgba(251,191,36,0.2)' : 'rgba(16,185,129,0.2)', margin: '0 auto 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {score === 100 ? <Trophy size={40} color="var(--color-accent-gold)" /> : <CheckCircle size={40} color="var(--color-accent)" />}
-          </div>
-          
-          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>
-            {score === 100 ? 'Perfect Score!' : 'Good Effort!'}
-          </h2>
-          
-          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: 12, textAlign: 'left', marginBottom: '2rem' }}>
-            <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: score === 100 ? 'var(--color-accent)' : 'var(--color-danger)', marginBottom: '0.5rem' }}>
-              {score === 100 ? <><CheckCircle size={18} /> Correct</> : <><AlertCircle size={18} /> Incorrect</>}
-            </p>
-            <p style={{ color: 'var(--color-text-muted)', lineHeight: 1.6 }}>{question.explanation}</p>
-          </div>
-
-          <div style={{ padding: '1rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, marginBottom: '2rem', color: 'var(--color-accent-gold)', fontWeight: 600 }}>
-            + {score === 100 ? 50 : 10} XP Earned!
-          </div>
-
-          <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleNext}>
-            Return to Dashboard
-          </button>
-        </div>
-      )}
-
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { PieChart, DollarSign, ArrowRight, AlertCircle } from 'lucide-react';
+import { PieChart, DollarSign, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import DashboardLayout from '../../layouts/DashboardLayout';
 
 export default function BudgetSimulator() {
   const [income, setIncome] = useState(5000);
@@ -16,133 +17,198 @@ export default function BudgetSimulator() {
   const targetSavings = income * 0.2;
 
   return (
-    <div className="animate-fadeInUp" style={{ maxWidth: 1000, margin: '0 auto', paddingBottom: '4rem' }}>
-      
-      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: 48, height: 48, borderRadius: '12px', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-accent)' }}>
-          <PieChart size={24} />
+    <DashboardLayout>
+      <div className="flex flex-col gap-6 animate-fadeInUp font-sans max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 pb-3 border-b border-slate-200/80">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+            <PieChart className="w-5 h-5 stroke-[2]" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Budgeting Simulator
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
+              Interactive 50/30/20 rule calculator to plan and optimize your monthly income.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem' }}>Budgeting Simulator</h1>
-          <p style={{ color: 'var(--color-text-muted)' }}>Interactive 50/30/20 rule calculator to plan your monthly finances.</p>
+
+        {/* Simulator Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Input Sliders (7 cols) */}
+          <div className="md:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs flex flex-col gap-6">
+            <h3 className="font-extrabold text-base text-slate-900 tracking-tight pb-3 border-b border-slate-100">
+              Monthly Income & Allocation
+            </h3>
+
+            {/* Income Input */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-700">
+                Total Monthly Income ($)
+              </label>
+              <div className="relative">
+                <DollarSign className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="number"
+                  value={income}
+                  onChange={(e) => setIncome(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 font-bold text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <hr className="border-slate-100" />
+
+            {/* Allocation Sliders */}
+            <div className="flex flex-col gap-5">
+              {/* Needs Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                  <span>Needs (Rent, Groceries, Utilities)</span>
+                  <span className={needs > targetNeeds ? 'text-red-600' : 'text-slate-900'}>
+                    ${needs}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={income}
+                  value={needs}
+                  onChange={(e) => setNeeds(Number(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+                  <span>Target: 50%</span>
+                  <span>Recommended: ${targetNeeds}</span>
+                </div>
+              </div>
+
+              {/* Wants Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                  <span>Wants (Dining out, Hobbies, Shopping)</span>
+                  <span className={wants > targetWants ? 'text-amber-600' : 'text-slate-900'}>
+                    ${wants}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={income}
+                  value={wants}
+                  onChange={(e) => setWants(Number(e.target.value))}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+                  <span>Target: 30%</span>
+                  <span>Recommended: ${targetWants}</span>
+                </div>
+              </div>
+
+              {/* Savings Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                  <span>Savings & Investments</span>
+                  <span className={savings < targetSavings ? 'text-red-600' : 'text-emerald-600'}>
+                    ${savings}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={income}
+                  value={savings}
+                  onChange={(e) => setSavings(Number(e.target.value))}
+                  className="w-full accent-emerald-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+                  <span>Target: 20%</span>
+                  <span>Recommended: ${targetSavings}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Remaining Balance & Breakdown (5 cols) */}
+          <div className="md:col-span-5 flex flex-col gap-6">
+            {/* Balance Card */}
+            <div
+              className={`border rounded-2xl p-6 text-center shadow-2xs flex flex-col items-center justify-center ${
+                balance < 0
+                  ? 'bg-red-50 border-red-200 text-red-900'
+                  : balance > 0
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              <span className="text-xs font-bold uppercase tracking-wider opacity-75">
+                Unallocated Balance
+              </span>
+              <span className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1">
+                ${balance}
+              </span>
+              {balance < 0 && (
+                <div className="flex items-center gap-1.5 mt-2 text-xs font-bold text-red-700">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <span>Expenses exceed total monthly income!</span>
+                </div>
+              )}
+            </div>
+
+            {/* Analysis Box */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs flex flex-col gap-4">
+              <h3 className="font-extrabold text-base text-slate-900 tracking-tight pb-3 border-b border-slate-100">
+                50/30/20 Rule Analysis
+              </h3>
+
+              <div className="flex flex-col gap-3 text-xs text-slate-700">
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <ArrowRight className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-900 block">
+                      Needs: {((needs / (income || 1)) * 100).toFixed(0)}%
+                    </span>
+                    <span className="text-slate-500 leading-relaxed">
+                      {needs > targetNeeds
+                        ? 'Spending is higher than 50%. Look for ways to lower fixed bills.'
+                        : 'Essential expenses are within the recommended target.'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <ArrowRight className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-900 block">
+                      Wants: {((wants / (income || 1)) * 100).toFixed(0)}%
+                    </span>
+                    <span className="text-slate-500 leading-relaxed">
+                      {wants > targetWants
+                        ? 'Discretionary spending is above 30%. Consider cutting non-essentials.'
+                        : 'Lifestyle spending is healthy and well-balanced.'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <ArrowRight className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-900 block">
+                      Savings: {((savings / (income || 1)) * 100).toFixed(0)}%
+                    </span>
+                    <span className="text-slate-500 leading-relaxed">
+                      {savings < targetSavings
+                        ? 'Savings is below 20%. Try to boost your emergency fund & SIPs.'
+                        : 'Great job! You are saving 20%+ for your financial future.'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-        
-        {/* Left Column: Inputs */}
-        <div className="glass" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem' }}>Monthly Income & Allocation</h3>
-          
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Total Monthly Income</label>
-            <div style={{ position: 'relative' }}>
-              <DollarSign size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-              <input 
-                type="number" 
-                value={income} 
-                onChange={(e) => setIncome(Number(e.target.value))}
-                style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '1.1rem', fontWeight: 600 }}
-              />
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Needs (Rent, Groceries, Bills)</label>
-                <span style={{ color: needs > targetNeeds ? 'var(--color-danger)' : 'var(--color-text)' }}>${needs}</span>
-              </div>
-              <input 
-                type="range" min="0" max={income} value={needs} onChange={(e) => setNeeds(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#3b82f6' }}
-              />
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>Target: ${targetNeeds} (50%)</div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Wants (Dining out, Hobbies)</label>
-                <span style={{ color: wants > targetWants ? 'var(--color-danger)' : 'var(--color-text)' }}>${wants}</span>
-              </div>
-              <input 
-                type="range" min="0" max={income} value={wants} onChange={(e) => setWants(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#f59e0b' }}
-              />
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>Target: ${targetWants} (30%)</div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Savings & Investments</label>
-                <span style={{ color: savings < targetSavings ? 'var(--color-danger)' : 'var(--color-accent)' }}>${savings}</span>
-              </div>
-              <input 
-                type="range" min="0" max={income} value={savings} onChange={(e) => setSavings(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#10b981' }}
-              />
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>Target: ${targetSavings} (20%)</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Analysis */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          <div className="glass" style={{ padding: '2rem', textAlign: 'center', background: balance < 0 ? 'rgba(239,68,68,0.1)' : balance > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${balance < 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}` }}>
-            <h4 style={{ fontSize: '1rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>Remaining Balance</h4>
-            <div style={{ fontSize: '3rem', fontWeight: 800, color: balance < 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>
-              ${balance}
-            </div>
-            {balance < 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--color-danger)', marginTop: '1rem', fontSize: '0.9rem' }}>
-                <AlertCircle size={16} /> You are over budget!
-              </div>
-            )}
-          </div>
-
-          <div className="glass" style={{ padding: '2rem', flex: 1 }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem' }}>Analysis</h3>
-            
-            <ul style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: 0, margin: 0, listStyle: 'none' }}>
-              
-              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <ArrowRight size={18} color={needs > targetNeeds ? 'var(--color-danger)' : 'var(--color-accent)'} style={{ marginTop: '0.1rem' }} />
-                <div>
-                  <strong style={{ display: 'block', marginBottom: '0.2rem' }}>Needs ({(needs/income*100).toFixed(0)}%)</strong>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                    {needs > targetNeeds ? "You are spending more than 50% on needs. Consider finding ways to lower fixed costs." : "Great! Your essential expenses are within the recommended 50%."}
-                  </span>
-                </div>
-              </li>
-              
-              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <ArrowRight size={18} color={wants > targetWants ? 'var(--color-danger)' : 'var(--color-accent-gold)'} style={{ marginTop: '0.1rem' }} />
-                <div>
-                  <strong style={{ display: 'block', marginBottom: '0.2rem' }}>Wants ({(wants/income*100).toFixed(0)}%)</strong>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                    {wants > targetWants ? "Your discretionary spending is over 30%. Try cutting back on non-essentials." : "Your lifestyle spending is balanced."}
-                  </span>
-                </div>
-              </li>
-
-              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <ArrowRight size={18} color={savings < targetSavings ? 'var(--color-danger)' : 'var(--color-accent)'} style={{ marginTop: '0.1rem' }} />
-                <div>
-                  <strong style={{ display: 'block', marginBottom: '0.2rem' }}>Savings ({(savings/income*100).toFixed(0)}%)</strong>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                    {savings < targetSavings ? "You are saving less than the recommended 20%. Try to boost your savings rate." : "Excellent! You are saving 20% or more for your future."}
-                  </span>
-                </div>
-              </li>
-
-            </ul>
-          </div>
-        </div>
-
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

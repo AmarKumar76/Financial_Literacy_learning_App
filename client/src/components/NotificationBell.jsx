@@ -84,7 +84,7 @@ export default function NotificationBell() {
           style={{ 
             position: 'absolute', 
             top: 'calc(100% + 10px)', right: 0, 
-            width: 350, 
+            width: 'min(350px, 90vw)', 
             zIndex: 1000, 
             padding: '1rem',
             boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
