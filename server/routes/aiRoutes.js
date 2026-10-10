@@ -1,16 +1,17 @@
 const express = require('express');
-const router  = express.Router();
+const router = express.Router();
 
 const {
   generateDrafts,
   improveExplanation,
   listDraftsByLesson,
+  chatWithAI,
 } = require('../controllers/aiController');
 
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 
 // All AI routes require Admin role
-router.use(verifyToken, isAdmin);
+router.use(verifyToken);
 
 /**
  * POST /api/ai/quiz-drafts
@@ -31,5 +32,8 @@ router.get('/drafts/:lessonId', listDraftsByLesson);
  * Body: { questionId }
  */
 router.post('/improve-explanation', improveExplanation);
+
+// chatbot api
+router.post("/chat", chatWithAI);
 
 module.exports = router;

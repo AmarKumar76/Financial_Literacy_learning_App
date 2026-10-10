@@ -1,179 +1,508 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// ---------------------------------------------------------------------------
-// Initialise the Gemini client (singleton)
-// ---------------------------------------------------------------------------
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+// ============================================================
+// GEMINI CONFIGURATION
+// ============================================================
 
-/**
- * Returns a configured GenerativeModel instance.
- * Temperature 0.4 gives creative-yet-consistent JSON output.
- */
-const getModel = () =>
-  genAI.getGenerativeModel({
+if (!process.env.GEMINI_API_KEY) {
+  console.warn("⚠️ GEMINI_API_KEY is not configured.");
+}
+
+const genAI = new GoogleGenerativeAI(
+  process.env.GEMINI_API_KEY || ""
+);
+
+const MODEL_NAME =
+  process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
+
+// ============================================================
+// QUIZ MODEL
+// Used for AI-generated quiz questions
+// ============================================================
+
+const getQuizModel = () => {
+  return genAI.getGenerativeModel({
     model: MODEL_NAME,
+
     generationConfig: {
       temperature: 0.4,
       topP: 0.9,
       topK: 40,
       maxOutputTokens: 4096,
-      responseMimeType: 'application/json', // Force JSON output
+
+      // Quiz generation must return JSON
+      responseMimeType: "application/json",
     },
   });
+};
 
-// ---------------------------------------------------------------------------
-// Prompt builder
-// ---------------------------------------------------------------------------
 
-/**
- * Builds the strict prompt for quiz question generation.
- *
- * @param {string} lessonTitle   - Title of the lesson
- * @param {string} lessonContent - Full text content of the lesson
- * @param {string} categoryName  - Name of the parent category (e.g. "Budgeting")
- * @param {number} count         - Number of questions to generate
- * @param {string} difficulty    - 'Easy' | 'Medium' | 'Hard'
- * @returns {string}             - Prompt string
- */
-const buildQuizPrompt = (lessonTitle, lessonContent, categoryName, count = 5, difficulty = 'Medium') => `
-You are an expert financial literacy educator. Your task is to generate exactly ${count} quiz questions for a lesson.
+// ============================================================
+// CHAT MODEL
+// Used by FinBuddy chatbot
+// ============================================================
 
-**Lesson Title:** ${lessonTitle}
-**Category:** ${categoryName}
-**Difficulty:** ${difficulty}
-**Lesson Content:**
+const getChatModel = () => {
+  return genAI.getGenerativeModel({
+    model: MODEL_NAME,
+
+    generationConfig: {
+      temperature: 0.4,
+      topP: 0.9,
+      topK: 40,
+      maxOutputTokens: 1024,
+    },
+  });
+};
+
+
+// ============================================================
+// VALIDATE GEMINI CONFIGURATION
+// ============================================================
+
+const validateGeminiConfig = () => {
+  if (
+    !process.env.GEMINI_API_KEY ||
+    process.env.GEMINI_API_KEY === "your_gemini_api_key_here"
+  ) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured in the environment."
+    );
+  }
+};
+
+
+// ============================================================
+// QUIZ PROMPT BUILDER
+// ============================================================
+
+const buildQuizPrompt = (
+  lessonTitle,
+  lessonContent,
+  categoryName,
+  count = 5,
+  difficulty = "Medium"
+) => {
+  return `
+You are an expert financial literacy educator.
+
+Your task is to generate exactly ${count} quiz questions
+for the following lesson.
+
+Lesson Title:
+${lessonTitle}
+
+Category:
+${categoryName}
+
+Difficulty:
+${difficulty}
+
+Lesson Content:
 ---
 ${lessonContent}
 ---
 
-**Output Rules (STRICTLY follow):**
-1. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.
-2. The JSON must have a single key "questions" containing an array of exactly ${count} objects.
-3. Each question object must have these exact keys:
-   - "type": either "MCQ" or "TrueFalse"
-   - "questionText": string (the question)
-   - "options": array of strings (4 options for MCQ, exactly ["True","False"] for TrueFalse)
-   - "correctOption": integer (0-based index of the correct option in the options array)
-   - "explanation": string (1–2 sentences explaining why the answer is correct)
-   - "difficulty": "${difficulty}"
-   - "points": integer (Easy=5, Medium=10, Hard=15)
-4. All questions must be directly based on the lesson content.
-5. Ensure distractors (wrong options) are plausible but clearly incorrect upon reflection.
-6. Do NOT repeat questions.
+OUTPUT RULES:
 
-Return only the JSON object.
+1. Return ONLY a valid JSON object.
+2. Do not return markdown.
+3. Do not return code fences.
+4. Do not add any text outside the JSON object.
+5. The JSON must contain exactly one key:
+   "questions"
+6. "questions" must contain exactly ${count} objects.
+
+Each question object must contain:
+
+{
+  "type": "MCQ" or "TrueFalse",
+  "questionText": "string",
+  "options": ["string"],
+  "correctOption": 0,
+  "explanation": "string",
+  "difficulty": "${difficulty}",
+  "points": number
+}
+
+Rules for options:
+
+- MCQ must contain exactly 4 options.
+- TrueFalse must contain exactly:
+  ["True", "False"]
+
+Rules for correctOption:
+
+- It must be a zero-based index.
+- It must point to the correct answer.
+
+Rules for questions:
+
+- Questions must be directly based on the lesson content.
+- Wrong options must be plausible.
+- Do not repeat questions.
+- Explanations should be 1–2 sentences.
+- Do not introduce information unrelated to the lesson.
+
+Points:
+
+Easy = 5
+Medium = 10
+Hard = 15
+
+Return ONLY the JSON object.
 `;
+};
 
-// ---------------------------------------------------------------------------
-// Core generation function
-// ---------------------------------------------------------------------------
 
-/**
- * Generate quiz question drafts using Gemini AI.
- *
- * @param {object} params
- * @param {string} params.lessonTitle
- * @param {string} params.lessonContent
- * @param {string} params.categoryName
- * @param {number} params.count         - Desired number of questions (1–10)
- * @param {string} params.difficulty    - 'Easy' | 'Medium' | 'Hard'
- * @returns {Promise<Array>}            - Array of validated question objects
- */
+// ============================================================
+// GENERATE QUIZ DRAFTS
+// ============================================================
+
 const generateQuizDrafts = async ({
   lessonTitle,
   lessonContent,
   categoryName,
   count = 5,
-  difficulty = 'Medium',
+  difficulty = "Medium",
 }) => {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
-    throw new Error('GEMINI_API_KEY is not configured in the environment.');
+  validateGeminiConfig();
+
+  // Validate count
+  if (count < 1 || count > 10) {
+    throw new Error("Question count must be between 1 and 10.");
   }
 
-  const prompt = buildQuizPrompt(lessonTitle, lessonContent, categoryName, count, difficulty);
-
-  const model    = getModel();
-  const result   = await model.generateContent(prompt);
-  const rawText  = result.response.text();
-
-  // --- Parse JSON ---
-  let parsed;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch {
-    throw new Error(`Gemini returned non-JSON output: ${rawText.slice(0, 300)}`);
-  }
-
-  if (!Array.isArray(parsed.questions)) {
-    throw new Error('Gemini response missing "questions" array.');
-  }
-
-  // --- Validate each question ---
-  const validated = parsed.questions.map((q, idx) => {
-    if (typeof q.questionText !== 'string' || !q.questionText.trim()) {
-      throw new Error(`Question ${idx + 1}: missing or empty "questionText".`);
-    }
-    if (!['MCQ', 'TrueFalse'].includes(q.type)) {
-      throw new Error(`Question ${idx + 1}: invalid type "${q.type}".`);
-    }
-    if (!Array.isArray(q.options) || q.options.length < 2) {
-      throw new Error(`Question ${idx + 1}: "options" must be an array with ≥ 2 items.`);
-    }
-    if (
-      typeof q.correctOption !== 'number' ||
-      q.correctOption < 0 ||
-      q.correctOption >= q.options.length
-    ) {
-      throw new Error(`Question ${idx + 1}: "correctOption" index ${q.correctOption} is out of range.`);
-    }
-
-    return {
-      type:          q.type,
-      questionText:  q.questionText.trim(),
-      options:       q.options.map((o) => (typeof o === 'string' ? o.trim() : String(o))),
-      correctOption: q.correctOption,
-      explanation:   (q.explanation || '').trim(),
-      difficulty:    q.difficulty || difficulty,
-      points:        typeof q.points === 'number' ? q.points : (difficulty === 'Easy' ? 5 : difficulty === 'Hard' ? 15 : 10),
-      source:        'AI-Generated',
-    };
-  });
-
-  if (validated.length !== count) {
+  // Validate difficulty
+  if (!["Easy", "Medium", "Hard"].includes(difficulty)) {
     throw new Error(
-      `Expected ${count} questions but Gemini returned ${validated.length}.`
+      "Difficulty must be Easy, Medium, or Hard."
     );
   }
 
-  return validated;
+  const prompt = buildQuizPrompt(
+    lessonTitle,
+    lessonContent,
+    categoryName,
+    count,
+    difficulty
+  );
+
+  try {
+    const model = getQuizModel();
+
+    const result = await model.generateContent(prompt);
+
+    const rawText = result.response.text();
+
+    // --------------------------------------------------------
+    // Parse JSON
+    // --------------------------------------------------------
+
+    let parsed;
+
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (error) {
+      throw new Error(
+        `Gemini returned invalid JSON: ${rawText.slice(0, 300)}`
+      );
+    }
+
+    // --------------------------------------------------------
+    // Validate questions array
+    // --------------------------------------------------------
+
+    if (!Array.isArray(parsed.questions)) {
+      throw new Error(
+        'Gemini response does not contain a valid "questions" array.'
+      );
+    }
+
+    if (parsed.questions.length !== count) {
+      throw new Error(
+        `Expected ${count} questions but Gemini returned ${parsed.questions.length}.`
+      );
+    }
+
+    // --------------------------------------------------------
+    // Validate every question
+    // --------------------------------------------------------
+
+    const validatedQuestions = parsed.questions.map(
+      (question, index) => {
+        const questionNumber = index + 1;
+
+        // Question text
+        if (
+          typeof question.questionText !== "string" ||
+          !question.questionText.trim()
+        ) {
+          throw new Error(
+            `Question ${questionNumber}: questionText is missing.`
+          );
+        }
+
+        // Type
+        if (
+          !["MCQ", "TrueFalse"].includes(question.type)
+        ) {
+          throw new Error(
+            `Question ${questionNumber}: invalid question type.`
+          );
+        }
+
+        // Options
+        if (!Array.isArray(question.options)) {
+          throw new Error(
+            `Question ${questionNumber}: options must be an array.`
+          );
+        }
+
+        // MCQ validation
+        if (
+          question.type === "MCQ" &&
+          question.options.length !== 4
+        ) {
+          throw new Error(
+            `Question ${questionNumber}: MCQ must have exactly 4 options.`
+          );
+        }
+
+        // True/False validation
+        if (
+          question.type === "TrueFalse" &&
+          question.options.length !== 2
+        ) {
+          throw new Error(
+            `Question ${questionNumber}: TrueFalse must have exactly 2 options.`
+          );
+        }
+
+        // Correct option
+        if (
+          typeof question.correctOption !== "number" ||
+          question.correctOption < 0 ||
+          question.correctOption >= question.options.length
+        ) {
+          throw new Error(
+            `Question ${questionNumber}: correctOption is invalid.`
+          );
+        }
+
+        // Explanation
+        if (
+          typeof question.explanation !== "string"
+        ) {
+          question.explanation = "";
+        }
+
+        // Points
+        let points = question.points;
+
+        if (typeof points !== "number") {
+          if (difficulty === "Easy") {
+            points = 5;
+          } else if (difficulty === "Hard") {
+            points = 15;
+          } else {
+            points = 10;
+          }
+        }
+
+        return {
+          type: question.type,
+
+          questionText:
+            question.questionText.trim(),
+
+          options: question.options.map((option) =>
+            String(option).trim()
+          ),
+
+          correctOption: question.correctOption,
+
+          explanation:
+            question.explanation.trim(),
+
+          difficulty:
+            question.difficulty || difficulty,
+
+          points,
+
+          source: "AI-Generated",
+        };
+      }
+    );
+
+    return validatedQuestions;
+
+  } catch (error) {
+    console.error(
+      "❌ Gemini Quiz Generation Error:",
+      error.message
+    );
+
+    throw error;
+  }
 };
 
-// ---------------------------------------------------------------------------
-// Explanation regeneration helper
-// ---------------------------------------------------------------------------
 
-/**
- * Ask Gemini to rewrite or improve the explanation for a single question.
- *
- * @param {string} questionText
- * @param {string} correctAnswer  - Text of the correct option
- * @returns {Promise<string>}     - Improved explanation string
- */
-const improveExplanation = async (questionText, correctAnswer) => {
+// ============================================================
+// IMPROVE QUIZ EXPLANATION
+// ============================================================
+
+const improveExplanation = async (
+  questionText,
+  correctAnswer
+) => {
+  validateGeminiConfig();
+
   const prompt = `
-You are a financial literacy tutor. A student answered the following quiz question incorrectly.
-Write a clear, friendly, 2–3 sentence explanation of why "${correctAnswer}" is the correct answer.
+You are a financial literacy tutor.
 
-Question: "${questionText}"
-Correct Answer: "${correctAnswer}"
+A student answered the following quiz question incorrectly.
 
-Return ONLY a plain text explanation. No JSON, no bullet points.
+Explain clearly and simply why the provided answer
+is correct.
+
+Question:
+"${questionText}"
+
+Correct Answer:
+"${correctAnswer}"
+
+Requirements:
+
+1. Use beginner-friendly language.
+2. Explain the concept clearly.
+3. Give a small example if useful.
+4. Keep the explanation to 2–3 sentences.
+5. Do not provide personalized financial advice.
+6. Return only the explanation.
+7. Do not use JSON.
+8. Do not use markdown.
 `;
 
-  const model  = getModel();
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  try {
+    const model = getChatModel();
+
+    const result = await model.generateContent(prompt);
+
+    return result.response.text().trim();
+
+  } catch (error) {
+    console.error(
+      "❌ Gemini Explanation Error:",
+      error.message
+    );
+
+    throw error;
+  }
 };
 
-module.exports = { generateQuizDrafts, improveExplanation };
+
+// ============================================================
+// FINBUDDY CHATBOT
+// ============================================================
+
+const generateFinancialResponse = async (question) => {
+  validateGeminiConfig();
+
+  if (
+    typeof question !== "string" ||
+    !question.trim()
+  ) {
+    throw new Error(
+      "A valid question is required."
+    );
+  }
+
+  const prompt = `
+You are FinBuddy, the AI financial education assistant
+inside the FIN-08 Financial Literacy Learning App.
+
+Your purpose is to help beginners understand financial
+concepts in a simple, practical and educational way.
+
+IMPORTANT RULES:
+
+1. Explain financial concepts in simple beginner-friendly
+   language.
+
+2. Use practical examples whenever useful.
+
+3. Keep answers educational and informational.
+
+4. Do NOT provide personalized investment advice.
+
+5. Do NOT provide personalized tax advice.
+
+6. Do NOT tell users which stock, cryptocurrency,
+   mutual fund, insurance product or financial product
+   they should buy.
+
+7. Do NOT guarantee financial returns or outcomes.
+
+8. If a user asks for personalized financial advice,
+   explain the relevant concept generally and recommend
+   consulting a qualified financial professional.
+
+9. Do not pretend to be a financial advisor.
+
+10. For scam, fraud, phishing, OTP or fake loan questions,
+    provide safety-focused educational guidance.
+
+11. If the question is unrelated to financial education,
+    politely redirect the user toward topics such as:
+    budgeting, banking, taxes, investing basics,
+    credit, loans, insurance and scam awareness.
+
+12. Keep answers concise and easy to understand.
+
+13. Use INR/Indian examples when a currency example
+    is necessary.
+
+14. Do not use unnecessary technical terminology.
+
+USER QUESTION:
+${question.trim()}
+`;
+
+  try {
+    const model = getChatModel();
+
+    const result = await model.generateContent(prompt);
+
+    const responseText =
+      result.response.text();
+
+    if (!responseText || !responseText.trim()) {
+      throw new Error(
+        "Gemini returned an empty response."
+      );
+    }
+
+    return responseText.trim();
+
+  } catch (error) {
+    console.error(
+      "❌ FinBuddy Gemini Error:",
+      error.message
+    );
+
+    throw error;
+  }
+};
+
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
+module.exports = {
+  generateQuizDrafts,
+  improveExplanation,
+  generateFinancialResponse,
+};

@@ -1,7 +1,7 @@
-const { generateQuizDrafts, improveExplanation } = require('../services/gemini/geminiService');
-const Lesson        = require('../models/Lesson');
-const Category      = require('../models/Category');
-const QuizQuestion  = require('../models/QuizQuestion');
+const { generateQuizDrafts, improveExplanation, generateFinancialResponse } = require('../services/gemini/geminiService');
+const Lesson = require('../models/Lesson');
+const Category = require('../models/Category');
+const QuizQuestion = require('../models/QuizQuestion');
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/quiz-drafts
@@ -44,20 +44,20 @@ exports.generateDrafts = async (req, res) => {
 
     // --- Call Gemini service ---
     const drafts = await generateQuizDrafts({
-      lessonTitle:    lesson.title,
-      lessonContent:  lesson.content,
+      lessonTitle: lesson.title,
+      lessonContent: lesson.content,
       categoryName,
-      count:          numCount,
+      count: numCount,
       difficulty,
     });
 
     // --- Persist drafts to DB (status = Draft, source = AI-Generated) ---
     const toInsert = drafts.map((d) => ({
       ...d,
-      lessonId:   lesson._id,
+      lessonId: lesson._id,
       categoryId: lesson.categoryId,
-      status:     'Draft',
-      source:     'AI-Generated',
+      status: 'Draft',
+      source: 'AI-Generated',
       // Convert options from string[] to { text } objects for the schema
       options: d.options.map((text) => ({ text })),
     }));
@@ -65,12 +65,12 @@ exports.generateDrafts = async (req, res) => {
     const saved = await QuizQuestion.insertMany(toInsert);
 
     res.status(201).json({
-      message:       `${saved.length} AI-generated draft question(s) created. Review and publish via the admin quiz routes.`,
-      lessonId:      lesson._id,
-      lessonTitle:   lesson.title,
+      message: `${saved.length} AI-generated draft question(s) created. Review and publish via the admin quiz routes.`,
+      lessonId: lesson._id,
+      lessonTitle: lesson.title,
       difficulty,
       draftsCreated: saved.length,
-      drafts:        saved,
+      drafts: saved,
     });
   } catch (err) {
     console.error('generateDrafts error:', err);
@@ -79,13 +79,13 @@ exports.generateDrafts = async (req, res) => {
     if (err.message?.includes('GEMINI_API_KEY')) {
       return res.status(503).json({
         message: 'AI service is not configured. Please set GEMINI_API_KEY in your .env file.',
-        error:   err.message,
+        error: err.message,
       });
     }
     if (err.message?.includes('Expected') || err.message?.includes('Gemini returned')) {
       return res.status(502).json({
         message: 'AI returned an unexpected response. Please try again.',
-        error:   err.message,
+        error: err.message,
       });
     }
 
@@ -121,8 +121,8 @@ exports.improveExplanation = async (req, res) => {
     await question.save();
 
     res.status(200).json({
-      message:     'Explanation improved successfully.',
-      questionId:  question._id,
+      message: 'Explanation improved successfully.',
+      questionId: question._id,
       explanation: improvedText,
     });
   } catch (err) {
@@ -155,12 +155,76 @@ exports.listDraftsByLesson = async (req, res) => {
 
     res.status(200).json({
       lessonId,
-      lessonTitle:  lesson.title,
-      totalDrafts:  drafts.length,
+      lessonTitle: lesson.title,
+      totalDrafts: drafts.length,
       drafts,
     });
   } catch (err) {
     console.error('listDraftsByLesson error:', err);
     res.status(500).json({ message: 'Server error.', error: err.message });
+  }
+};
+
+//chatbot controller
+// exports.chatWithAI = async (req, res) => {
+//   try {
+//     const { message } = req.body;
+
+//     if (!message || !message.trim()) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Message is required",
+//       });
+//     }
+
+//     const reply = await generateFinancialResponse(message);
+
+//     res.status(200).json({
+//       success: true,
+//       reply,
+//     });
+
+//   } catch (error) {
+//     console.error("Gemini Error:", error);
+
+//     res.status(500).json({
+//       success: false,
+//       message: "AI assistant is temporarily unavailable.",
+//     });
+//   }
+// };
+
+exports.chatWithAI = async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Message is required",
+      });
+    }
+
+    const reply = await generateFinancialResponse(message);
+
+    return res.status(200).json({
+      success: true,
+      reply,
+    });
+
+  } catch (error) {
+    console.error("========== GEMINI ERROR ==========");
+    console.error(error);
+    console.error("Message:", error.message);
+    console.error("Status:", error.status);
+    console.error("Response:", error.response);
+    console.error("==================================");
+
+    return res.status(500).json({
+      success: false,
+      message: "AI assistant is temporarily unavailable.",
+      // TEMPORARY: remove this after debugging
+      error: error.message,
+    });
   }
 };

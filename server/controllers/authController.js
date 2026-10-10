@@ -1,16 +1,26 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+
+// Helper to check DB connection
+const isDbConnected = () => mongoose.connection.readyState === 1;
 
 // Register a new user
 exports.register = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      return res.status(503).json({
+        message: 'MongoDB is not connected. Please start local MongoDB service (`net start MongoDB`) or configure MONGODB_URI in server/.env',
+      });
+    }
+
     const { name, email, password } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'User with this email already exists.' });
     }
 
     // Hash password
@@ -44,25 +54,31 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: error.message || 'Server error during registration.' });
   }
 };
 
 // Login existing user
 exports.login = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      return res.status(503).json({
+        message: 'MongoDB is not connected. Please start local MongoDB service (`net start MongoDB`) or configure MONGODB_URI in server/.env',
+      });
+    }
+
     const { email, password } = req.body;
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid credentials. User not found.' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid credentials. Password incorrect.' });
     }
 
     // Generate JWT
@@ -83,6 +99,6 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: error.message || 'Server error during login.' });
   }
 };

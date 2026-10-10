@@ -1,18 +1,26 @@
 const User = require('../models/User');
 const QuizAttempt = require('../models/QuizAttempt');
+const Lesson = require('../models/Lesson');
+const Progress = require('../models/Progress');
 
 /**
  * GET /api/progress/me
- * Returns overall completion %, weak topics, recommended next lesson
+ * Returns overall completion %, weak topics, quiz statistics and XP metrics
  */
 exports.getMyProgress = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user._id || req.user.id;
 
     const user = await User.findById(userId).select('-passwordHash');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    const completedLessonsCount = await Progress.countDocuments({ userId, completed: true });
+    const totalLessonsCount = await Lesson.countDocuments({ status: 'Published' });
+    const overallProgress = totalLessonsCount > 0
+      ? Math.round((completedLessonsCount / totalLessonsCount) * 100)
+      : Math.min(100, Math.round((user.XP || 0) / 10));
 
     // Fetch quiz attempts to calculate averages and weak topics
     const attempts = await QuizAttempt.find({ userId }).populate('categoryId');
@@ -22,10 +30,11 @@ exports.getMyProgress = async (req, res) => {
 
     attempts.forEach(attempt => {
       totalScore += attempt.score;
-      const catId = attempt.categoryId?.toString();
+      const catId = attempt.categoryId?._id?.toString() || attempt.categoryId?.toString();
+      const catName = attempt.categoryId?.name || 'General';
       if (catId) {
         if (!categoryScores[catId]) {
-          categoryScores[catId] = { total: 0, count: 0, name: attempt.categoryId.name };
+          categoryScores[catId] = { total: 0, count: 0, name: catName };
         }
         categoryScores[catId].total += attempt.score;
         categoryScores[catId].count += 1;
@@ -43,12 +52,22 @@ exports.getMyProgress = async (req, res) => {
     }
 
     res.status(200).json({
-      overall: Math.min(100, (user.XP / 100)), // Simplified overall progress logic
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        learningGoal: user.learningGoal,
+      },
+      overall: overallProgress,
+      completedLessons: completedLessonsCount,
+      totalLessons: totalLessonsCount,
       quizAvg,
-      streak: user.streak,
-      weakTopics: weakTopics.length ? weakTopics : ['None! Keep up the good work.'],
-      XP: user.XP,
-      level: user.level
+      quizAttemptsCount: attempts.length,
+      streak: user.streak || 1,
+      weakTopics: weakTopics.length ? weakTopics : ['None! Keep up the great work.'],
+      XP: user.XP || 0,
+      level: user.level || 1,
     });
   } catch (error) {
     console.error('Progress Error:', error);

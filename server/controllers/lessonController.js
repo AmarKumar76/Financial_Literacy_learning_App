@@ -1,7 +1,6 @@
 const Lesson = require('../models/Lesson');
 const User = require('../models/User');
-// Optionally, const Progress = require('../models/Progress'); could be used if there is a separate progress collection.
-// For now, we update the user's XP directly based on the SRS Gamification rules (Complete lesson = 10 XP)
+const Progress = require('../models/Progress');
 
 // Get all published lessons (optionally filtered by categoryId)
 exports.getLessons = async (req, res) => {
@@ -11,7 +10,20 @@ exports.getLessons = async (req, res) => {
     if (categoryId) filter.categoryId = categoryId;
 
     const lessons = await Lesson.find(filter).sort({ createdAt: 1 });
-    res.status(200).json(lessons);
+    
+    // If user is authenticated, attach completion state
+    let completedLessonIds = new Set();
+    if (req.user) {
+      const userProgress = await Progress.find({ userId: req.user._id });
+      completedLessonIds = new Set(userProgress.map(p => p.lessonId.toString()));
+    }
+
+    const lessonsWithCompletion = lessons.map(l => ({
+      ...l.toObject(),
+      isCompleted: completedLessonIds.has(l._id.toString()),
+    }));
+
+    res.status(200).json(lessonsWithCompletion);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -24,7 +36,14 @@ exports.getLessonById = async (req, res) => {
     if (!lesson || lesson.status !== 'Published') {
       return res.status(404).json({ message: 'Lesson not found' });
     }
-    res.status(200).json(lesson);
+
+    let isCompleted = false;
+    if (req.user) {
+      const p = await Progress.findOne({ userId: req.user._id, lessonId: lesson._id });
+      isCompleted = !!p;
+    }
+
+    res.status(200).json({ ...lesson.toObject(), isCompleted });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -33,7 +52,7 @@ exports.getLessonById = async (req, res) => {
 // Mark a lesson as complete
 exports.completeLesson = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
     const lessonId = req.params.id;
 
     // Check if lesson exists
@@ -42,17 +61,42 @@ exports.completeLesson = async (req, res) => {
       return res.status(404).json({ message: 'Lesson not found' });
     }
 
-    // In a full implementation, you'd check a Progress model to ensure we don't award XP twice.
-    // For now, we simply update the User's XP (assuming 10 XP per lesson based on SRS Gamification Rules).
-    const updatedUser = await User.findByIdAndUpdate(
+    // Check if user has already completed this lesson
+    let existingProgress = await Progress.findOne({ userId, lessonId });
+    if (existingProgress) {
+      const user = await User.findById(userId).select('-passwordHash');
+      return res.status(200).json({
+        message: 'Lesson already completed.',
+        alreadyCompleted: true,
+        XP: user.XP,
+        level: user.level,
+      });
+    }
+
+    // Save new progress
+    await Progress.create({
       userId,
-      { $inc: { XP: 10 } },
-      { new: true }
-    ).select('-passwordHash');
+      lessonId,
+      categoryId: lesson.categoryId,
+      completed: true,
+      completedAt: new Date(),
+    });
+
+    // SRS Gamification rule: Complete lesson = +10 XP
+    const user = await User.findById(userId);
+    const newXP = (user.XP || 0) + 10;
+    const newLevel = Math.floor(newXP / 100) + 1;
+
+    user.XP = newXP;
+    user.level = newLevel;
+    await user.save();
 
     res.status(200).json({
-      message: 'Lesson completed successfully. You earned 10 XP!',
-      XP: updatedUser.XP,
+      message: 'Lesson completed successfully! You earned 10 XP.',
+      alreadyCompleted: false,
+      earnedXP: 10,
+      XP: user.XP,
+      level: user.level,
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
